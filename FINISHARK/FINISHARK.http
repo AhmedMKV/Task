@@ -1,0 +1,6 @@
+@FINISHARK_HostAddress = http://localhost:5038
+
+GET {{FINISHARK_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

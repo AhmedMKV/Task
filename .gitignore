@@ -1,0 +1,29 @@
+﻿# Build results
+bin/
+obj/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Rider / VS Code (safe to ignore)
+.idea/
+.vscode/
+
+# Environment / secrets
+appsettings.Development.json
+appsettings.Local.json
+*.env
+
+# Publish output
+publish/
