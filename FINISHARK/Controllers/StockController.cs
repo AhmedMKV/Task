@@ -3,6 +3,9 @@ using FINISHARK.DTO.Stock;
 using FINISHARK.Helpers;
 using FINISHARK.Interfaces;
 using FINISHARK.Mappers;
+using FINISHARK.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,11 +17,13 @@ namespace FINISHARK.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IStockRepo _stockRepo;
+        private readonly UserManager<AppUser> _userManager;
 
-        public StockController(ApplicationDbContext context, IStockRepo stockRepo)
+        public StockController(ApplicationDbContext context, IStockRepo stockRepo, UserManager<AppUser> userManager)
         {
             _context = context;
             _stockRepo = stockRepo;
+            _userManager = userManager;
         }
 
         [HttpGet]
@@ -46,6 +51,7 @@ namespace FINISHARK.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateStock(
             [FromBody] CreateStockRequestDto stockRequestDto
         )
@@ -63,6 +69,7 @@ namespace FINISHARK.Controllers
 
         [HttpPut]
         [Route("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateStock(
             [FromRoute] int id,
             [FromBody] UpdateStockRequestDto updateStockRequestDto
@@ -81,6 +88,7 @@ namespace FINISHARK.Controllers
 
         [HttpDelete]
         [Route("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteStock([FromRoute] int id)
         {
             if (!ModelState.IsValid)

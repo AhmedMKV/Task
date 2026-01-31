@@ -75,6 +75,9 @@ namespace FINISHARK
                 options.Password.RequireLowercase = true;
                 options.Password.RequireUppercase = true;
                 options.Password.RequiredLength = 10;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.AllowedForNewUsers = false;
             }).AddEntityFrameworkStores<ApplicationDbContext>();
 
             builder.Services.AddAuthentication(options =>
@@ -99,6 +102,23 @@ namespace FINISHARK
                 };
             });
 
+            // CORS: allow Flutter dev server on port 8000.
+            // Uses configuration key "AllowedOrigins" if present, otherwise falls back to localhost:8000.
+            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
+                                 ?? new[] { "http://localhost:8000", "https://localhost:8000" };
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFlutterDev", policy =>
+                {
+                    policy
+                        .WithOrigins(allowedOrigins)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                        // Tokens (JWT) are used in this project; do NOT enable .AllowCredentials() unless using cookie auth.
+                });
+            });
+
             builder.Services.AddScoped<IStockRepo, StockRepository>();
             builder.Services.AddScoped<ICommentRepo, CommentRepo>();
             builder.Services.AddScoped<ITokenService, TokenService>();
@@ -106,10 +126,13 @@ namespace FINISHARK
 
             var app = builder.Build();
 
-            // Seed roles at startup so AspNetRoles contains required roles
+            // Seed roles and admin user at startup
             using (var scope = app.Services.CreateScope())
             {
                 var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+                
+                // Seed roles
                 var roles = new[] { "User", "Admin" };
                 foreach (var roleName in roles)
                 {
@@ -117,6 +140,46 @@ namespace FINISHARK
                     if (!exists)
                     {
                         roleManager.CreateAsync(new IdentityRole(roleName)).GetAwaiter().GetResult();
+                    }
+                }
+
+                // Seed admin user
+                var adminEmail = "admin@finishark.com";
+                var adminUser = userManager.FindByEmailAsync(adminEmail).GetAwaiter().GetResult();
+                
+                if (adminUser == null)
+                {
+                    // Create admin user
+                    adminUser = new AppUser
+                    {
+                        UserName = "admin",
+                        Email = adminEmail,
+                        EmailConfirmed = true
+                    };
+                    
+                    var createResult = userManager.CreateAsync(adminUser, "Admin123!@#").GetAwaiter().GetResult();
+                    
+                    if (createResult.Succeeded)
+                    {
+                        // Assign admin role
+                        var adminRole = roleManager.FindByNameAsync("Admin").GetAwaiter().GetResult();
+                        if (adminRole != null)
+                        {
+                            userManager.AddToRoleAsync(adminUser, "Admin").GetAwaiter().GetResult();
+                        }
+                    }
+                }
+                else
+                {
+                    // Ensure existing admin user has admin role
+                    var isInAdminRole = userManager.IsInRoleAsync(adminUser, "Admin").GetAwaiter().GetResult();
+                    if (!isInAdminRole)
+                    {
+                        var adminRole = roleManager.FindByNameAsync("Admin").GetAwaiter().GetResult();
+                        if (adminRole != null)
+                        {
+                            userManager.AddToRoleAsync(adminUser, "Admin").GetAwaiter().GetResult();
+                        }
                     }
                 }
             }
@@ -129,6 +192,10 @@ namespace FINISHARK
             }
 
             app.UseHttpsRedirection();
+
+            // Apply CORS BEFORE authentication so preflight requests are handled.
+            app.UseCors("AllowFlutterDev");
+
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();

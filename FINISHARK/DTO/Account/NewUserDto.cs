@@ -10,5 +10,6 @@ namespace FINISHARK.DTO.Account
 
         public string Token { get; set; }
 
+        public List<string> Roles { get; set; } = new List<string>();
     }
 }

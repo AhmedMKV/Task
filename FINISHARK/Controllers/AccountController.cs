@@ -35,7 +35,7 @@ namespace FINISHARK.Controllers
             if (user == null)
                 return Unauthorized("invalid username");
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user,loginDto.Password,false);
+            var result = await _signInManager.PasswordSignInAsync(user, loginDto.Password, false, lockoutOnFailure: false);
             if (!result.Succeeded) {
                 return Unauthorized("username or password was incorrect");
             }
@@ -44,8 +44,8 @@ namespace FINISHARK.Controllers
             {
                 Username = user.UserName,
                 Email = user.Email,
-                Token = _tokenService.CreateToken(user)
-
+                Token = _tokenService.CreateToken(user),
+                Roles = (await _userManager.GetRolesAsync(user)).ToList()
             });
 
 
@@ -77,6 +77,7 @@ namespace FINISHARK.Controllers
                             Username = user.UserName,
                             Email = user.Email,
                             Token = _tokenService.CreateToken(user),
+                            Roles = (await _userManager.GetRolesAsync(user)).ToList()
                         });
 
                     }

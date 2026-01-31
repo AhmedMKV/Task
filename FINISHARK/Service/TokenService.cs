@@ -1,5 +1,6 @@
 ﻿using FINISHARK.Interfaces;
 using FINISHARK.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -12,10 +13,12 @@ namespace FINISHARK.Service
 
         private readonly IConfiguration _configuration;
         private readonly SymmetricSecurityKey _key;
+        private readonly UserManager<AppUser> _userManager;
 
-        public TokenService(IConfiguration configuration)
+        public TokenService(IConfiguration configuration, UserManager<AppUser> userManager)
         {
             _configuration = configuration;
+            _userManager = userManager;
             _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:SigningKey"]));
             
         }
@@ -25,8 +28,15 @@ namespace FINISHARK.Service
             {
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(JwtRegisteredClaimNames.GivenName, user.UserName)
-
             };
+
+            // Add role claims to the token
+            var roles = _userManager.GetRolesAsync(user).GetAwaiter().GetResult();
+            foreach (var role in roles)
+            {
+                Claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
             var credentials = new SigningCredentials(_key , SecurityAlgorithms.HmacSha256);
             var tokenDescriptor = new SecurityTokenDescriptor
             {

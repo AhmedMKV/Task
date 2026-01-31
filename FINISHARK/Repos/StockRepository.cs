@@ -68,7 +68,7 @@ namespace FINISHARK.Repos
         public async Task<Stock?> GetByIdAsync(int id)
         {
             return await _context
-                .Stock.Include(x => x.Comments)
+                .Stock.Include(x => x.Comments).ThenInclude(c => c.User)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 

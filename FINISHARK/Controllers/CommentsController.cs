@@ -80,6 +80,21 @@ namespace FINISHARK.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+            
+            var comment = await _commentRepo.GetByIdAsync(id);
+            if (comment == null)
+            {
+                return NotFound();
+            }
+
+            // Check if user owns the comment
+            var username = User.GetUsername();
+            var appUser = await _userManager.FindByNameAsync(username);
+            if (comment.AppUserId != appUser.Id)
+            {
+                return Forbid("You can only update your own comments.");
+            }
+
             var Comment = updateCommentDto.toCommentFromUpdate();
             var CommentMOdel = await _commentRepo.UpdateCommentAsync(id, Comment);
             return Ok(CommentMOdel.toCommentsDto());
@@ -91,12 +106,23 @@ namespace FINISHARK.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            var comment = await _commentRepo.DeleteCommentAsync(id);
+            
+            var comment = await _commentRepo.GetByIdAsync(id);
             if (comment == null)
             {
                 return NotFound();
             }
-            return Ok(comment.toCommentsDto());
+
+            // Check if user owns the comment
+            var username = User.GetUsername();
+            var appUser = await _userManager.FindByNameAsync(username);
+            if (comment.AppUserId != appUser.Id)
+            {
+                return Forbid("You can only delete your own comments.");
+            }
+
+            var deletedComment = await _commentRepo.DeleteCommentAsync(id);
+            return Ok(deletedComment.toCommentsDto());
         }
     }
 }
