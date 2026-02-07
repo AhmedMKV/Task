@@ -30,8 +30,12 @@ namespace FINISHARK.Data
                .WithMany(x => x.Portfolios)
                .HasForeignKey(x => x.StockID);
 
-
-            // Use fixed, deterministic Ids for seeded IdentityRole entries to avoid pending model changes
+            
+            builder.Entity<Comment>()
+                .HasOne(c => c.Stock)
+                .WithMany(s => s.Comments)
+                .HasForeignKey(c => c.StockId)
+                .OnDelete(DeleteBehavior.Cascade); 
             var roles = new[]
             {
                 new IdentityRole
